@@ -1,129 +1,97 @@
-if ($args.Count -lt 1) {
-	echo "Error: Need input filename without extension"
+$output = $args[0]
+class ff {
+    [Double]static duration([String]$filepath) {
+         return $(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $filepath)
+        
+    }
+	[Bool]static matchDuration([Double]$duration1, [Double]$duration2, [Int]$tolerance) {
+		return [Math]::Abs($duration1 - $duration2) -gt $tolerance
+	}
+	static cleanFiles($filesToClean) {
+		foreach($fileToClean in $filesToClean) { rm $fileToClean }
+	}
+}
+
+#echo "Output Filename: $output"
+if(!$output) {
+	echo "Error: Argument missing: `"concat_video.ps1 INPUT_FILENAME1[ INPUT_FILENAME2[ ...] -output OUTPUT_FILENAME`""
 	exit
 }
-$target_filename = $args[0]
-$input1_filename = "$($target_filename)-A.mp4"
-$input2_filename = "$($target_filename)-B.mp4"
-$input3_filename = "$($target_filename)-C.mp4"
-$input4_filename = "$($target_filename)-D.mp4"
-$inputCount = 2
-$output_filename = "$($target_filename).mp4"
-if (!(Test-Path $input1_filename -PathType Leaf)) {
-	echo "Error: $($input1_filename) does not exist!"
+if(!($output -like "*.mp4")) {
+	echo "Error: Output filename `"$output`" need to be `"*.mp4`""
 	exit
 }
-if (!(Test-Path $input2_filename -PathType Leaf)) {
-	echo "Error: $($input2_filename) does not exist!"
+$inputs =$args[1..($args.count-1)]
+for( $i = 0; $i -lt $inputs.count; $i++) {
+	$input = $inputs[$i]
+	if(!($input -like "*.mp4")) {
+		echo "Error: INPUT FILENAME `"$input`" need to be `"*.mp4`""
+		exit
+	}
+	if(!(Test-Path -PathType Leaf $input)) {
+		echo "Error: INPUT FILENAME `"$input`" does not exist"
+		exit
+	}
+}
+
+# end of input parameters precondition check
+
+
+$intermediates = @("") * $inputs.count
+[Double]$inputTotalDuration = 0.0
+$filesToClean = @("") * 0
+
+for( $i = 0; $i -lt $inputs.count; $i++) {
+	$input = $inputs[$i]
+	$intermediate = "_$((Get-Item $inputs[$i]).basename).ts"	
+	$intermediates[$i] = $intermediate
+	
+	#echo "Input $i Filename: $input"
+	#echo "Intermediate $i Filename: $intermediate"
+	
+	ffmpeg -hide_banner -v error -i $input -c copy -bsf:v h264_mp4toannexb -f mpegts $intermediate
+	
+	if (!$?) {
+		echo "Error: failed to generate intermediate file for $input1_filename"
+		[ff]::cleanFiles($filesToClean)
+		exit
+	}
+	[Double]$inputDuration = [ff]::duration($input)
+	[Double]$intermidiateDuration = [ff]::duration($intermediate)
+	#echo "input duration: $inputDuration"
+	#echo "intermediate duration: $intermidiateDuration"
+	if ([ff]::matchDuration($inputDuration,$intermidiateDuration, 1)) {
+		echo "Error: Generated intermediate file duration mismatched. input: $inputDuration intermediate: $intermidiateDuration"
+		[ff]::cleanFiles($filesToClean)
+		exit
+	}
+	
+	# done of input.mp4 -> input.ts
+	$inputTotalDuration = $inputTotalDuration + $inputDuration
+	$filesToClean += $intermediate
+}
+
+$intermediates_list = $intermediates -join "|"
+ffmpeg -hide_banner -v error -f mpegts -i "concat:$intermediates_list" -c copy -bsf:a aac_adtstoasc $output
+
+
+if (!$?) {
+	echo "failed to concate to output file $($output_filename)"
+	[ff]::cleanFiles($filesToClean)
 	exit
 }
-if (Test-Path $output_filename -PathType Leaf) {
-	echo "Error: $($output_filename) should not exist, output cannot be written!"
+$outputDuration = [ff]::duration($output)
+if( ![ff]::matchDuration($inputDuration, $inputTotalDuration, 1 * $inputs.count)) {
+	echo "Error: Generated output file duration mismatched. accumerated input duration: $inputDuration output duration: $outputDuration"
+	[ff]::cleanFiles($filesToClean)
 	exit
 }
 
-if (Test-Path $input3_filename -PathType Leaf) {
-	$inputCount = 3
-}
-
-if (Test-Path $input4_filename -PathType Leaf) {
-	$inputCount = 4
-}
-
-echo "Concat $($input1_filename) and $($input2_filename) to $($output_filename)"
-
-if ($inputCount -eq 2) {
-	echo "input (0/2) ready, generating (1/2)"
-	ffmpeg -i $input1_filename -c copy -bsf:v h264_mp4toannexb -f mpegts intA.ts	
-	if (!$?) {
-		echo "failed to generate intermediate file for $($input1_filename)"
-		exit
-	}
-	echo "input (1/2) ready, generating (2/2)"
-	ffmpeg -i $input2_filename -c copy -bsf:v h264_mp4toannexb -f mpegts intB.ts
-	echo "run 2"
-	if (!$?) {
-		echo "failed to generate intermediate file for $($input2_filename)"
-		del intA.ts
-		exit
-	}
-
-	echo "input (2/2) ready, concating to output"
-	ffmpeg -f mpegts -i "concat:intA.ts|intB.ts" -c copy -bsf:a aac_adtstoasc $output_filename
-	
-	if (!$?) {
-		echo "failed to concate to output file $($output_filename)"
-		del intA.ts
-		del intB.ts
-		exit
-	}
-	del intA.ts
-	del intB.ts
-	del $input1_filename
-	del $input2_filename
-	echo "output is concated as $($output_filename)"
-}
-
-# hardcode version for input count, refactoring to variable count in the future
-if ($inputCount -eq 4) {
-	echo "input (0/4) ready, generating (1/4)"
-	ffmpeg -i $input1_filename -c copy -bsf:v h264_mp4toannexb -f mpegts intA.ts	
-	if (!$?) {
-		echo "failed to generate intermediate file for $($input1_filename)"
-		exit
-	}
-	
-	echo "input (1/4) ready, generating (2/4)"
-	ffmpeg -i $input2_filename -c copy -bsf:v h264_mp4toannexb -f mpegts intB.ts
-	echo "run 2"
-	if (!$?) {
-		echo "failed to generate intermediate file for $($input2_filename)"
-		del intA.ts
-		exit
-	}
-	
-	
-	echo "input (2/4) ready, generating (3/4)"
-	ffmpeg -i $input3_filename -c copy -bsf:v h264_mp4toannexb -f mpegts intC.ts
-	echo "run 2"
-	if (!$?) {
-		echo "failed to generate intermediate file for $($input3_filename)"
-		del intA.ts
-		del intB.ts
-		exit
-	}
-	
-	
-	echo "input (3/4) ready, generating (4/4)"
-	ffmpeg -i $input4_filename -c copy -bsf:v h264_mp4toannexb -f mpegts intD.ts
-	echo "run 2"
-	if (!$?) {
-		echo "failed to generate intermediate file for $($input4_filename)"
-		del intA.ts
-		del intB.ts
-		del intC.ts
-		exit
-	}
-
-	echo "input (4/4) ready, concating to output"
-	ffmpeg -f mpegts -i "concat:intA.ts|intB.ts|intC.ts|intD.ts" -c copy -bsf:a aac_adtstoasc $output_filename
-	
-	if (!$?) {
-		echo "failed to concate to output file $($output_filename)"
-		del intA.ts
-		del intB.ts
-		del intC.ts
-		del intD.ts
-		exit
-	}
-	del intA.ts
-	del intB.ts
-	del intC.ts
-	del intD.ts
-	mkdir tmp
-	mv $input1_filename tmp/
-	mv $input2_filename tmp/
-	mv $input3_filename tmp/
-	mv $input4_filename tmp/
-	echo "output is concated as $($output_filename)"
-}
+[ff]::cleanFiles($filesToClean)
+#mkdir -force handled > $null
+#if($?) {
+	#foreach($input in $inputs) {
+	#	mv $input handled/
+	#}
+#}
+echo "$output is created by concating `"$($intermediates -join `"+`")`""
