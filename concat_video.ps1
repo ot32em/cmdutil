@@ -120,9 +120,10 @@ if ($inputCount -eq 4) {
 	del intB.ts
 	del intC.ts
 	del intD.ts
-	del $input1_filename
-	del $input2_filename
-	del $input3_filename
-	del $input4_filename
+	mkdir tmp
+	mv $input1_filename tmp/
+	mv $input2_filename tmp/
+	mv $input3_filename tmp/
+	mv $input4_filename tmp/
 	echo "output is concated as $($output_filename)"
 }
