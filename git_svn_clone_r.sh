@@ -19,7 +19,7 @@ script_abs="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )/$(basename $0)"
 # git svn show-externals output layout example:
 # >>> /YOUR/SUB/FOLDER/http://YOUR.SVN.REPO/repos/to/module/ SUBFOLDER/IN/EXTERNAL <<<
 dir_regex=[a-zA-Z0-9/]+
-repo_regex=http://[-a-zA-Z0-9@:%._+~#=/]+
+repo_regex=http[s]?://[-a-zA-Z0-9@:%._+~#=/]+
 external_path_regex=[a-zA-Z0-9/]+
 
 git svn show-externals | 
