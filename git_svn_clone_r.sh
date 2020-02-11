@@ -3,16 +3,14 @@ if [ -z $1 ] || [ -z $2 ]; then
 	exit;
 fi
 
-cur_script="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )/$(basename $0)"
-
 # clone main
-main_repo=$1
-main_path=$2
+git svn clone $1 $2
 
-git svn clone $main_repo $main_path
-pushd $main_path > /dev/null
 
 # clone externals
+pushd $main_path > /dev/null
+cur_script="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )/$(basename $0)"
+
 # git svn show-externals output layout example:
 # >>> /YOUR/SUB/FOLDER/http://YOUR.SVN.REPO/repos/to/module/ SUBFOLDER/IN/EXTERNAL <<<
 dir_regex=[a-zA-Z0-9/]+
