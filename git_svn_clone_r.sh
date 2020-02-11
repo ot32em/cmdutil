@@ -10,15 +10,16 @@ fi
 
 # clone main
 git svn clone $1 $2
-if [ $? -ne 0 ]; then 
-	echo "Failed: git svn clone $1 $2, ret: $?"
+ret=$?
+if [ $ret -ne 0 ] && [ $ret -ne 1 ]; then 
+	echo "Failed: git svn clone $1 $2, ret: $ret"
 	exit;
 fi
 
 
 # clone externals
-pushd $main_path > /dev/null
-git_svn_clone_r_path ="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )/$(basename $0)"
+pushd $2> /dev/null
+git_svn_clone_r_path="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )/$(basename $0)"
 
 # git svn show-externals output layout example:
 # >>> /YOUR/SUB/FOLDER/http://YOUR.SVN.REPO/repos/to/module/ SUBFOLDER/IN/EXTERNAL <<<
@@ -34,7 +35,7 @@ while read line; do
 		clone_dir=${BASH_REMATCH[3]}
 		
 		pushd $sub_dir > /dev/null
-		eval "$git_svn_clone_r_path $repo_url $clone_dir"
+		eval "${git_svn_clone_r_path} ${repo_url} ${clone_dir}"
 		popd > /dev/null
 	fi
 done
