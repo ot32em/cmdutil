@@ -1,5 +1,5 @@
 if [ -z $1 ] || [ -z $2 ]; then 
-	echo "Usage: ./XXX.sh REPO_URL CLONE_DIR"
+	echo "Usage: git_svn_clone_r.sh REPO_URL CLONE_DIR"
 	exit;
 fi
 
