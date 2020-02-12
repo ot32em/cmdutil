@@ -14,7 +14,7 @@ while read -r line; do
 		repo_url=${BASH_REMATCH[2]}
 		clone_dir=${BASH_REMATCH[3]}
 		
-		echo "$sub_dir $repo_url $clone_dir"
+		echo "$sub_dir $repo_url $clone_dir ${sub_dir}${clone_dir}"
 	fi
 done
 
