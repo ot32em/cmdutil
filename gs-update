@@ -6,7 +6,7 @@ git stash
 git svn rebase
 git stash pop
 
-ls_git_svn_externals.sh 4 | 
+gs-lsext 4 | 
 	while read clone_dir; do 
 		pushd $clone_dir > /dev/null
 		eval $full_path_cmd

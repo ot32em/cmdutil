@@ -9,7 +9,7 @@ git svn clone $1 $2 || exit
 
 # recrusively
 pushd $2> /dev/null
-ls_git_svn_externals.sh | 
+gs-lsext | 
 	while read line; do 
 		# ls_git_svn_externals.sh gives "SUB_DIR REPO_URL CLONE_DIR CLONE_FULL_DIR"
 		words=(${line})
